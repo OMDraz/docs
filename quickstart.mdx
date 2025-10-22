@@ -1,80 +1,119 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Start creating driver verifications in minutes"
 ---
 
-## Get started in three steps
+## Get started in four steps
 
-Get your documentation site running locally and make your first customization.
+Get your platform set up in order to start issuing verifications and vetting drivers.
 
-### Step 1: Set up your local environment
+### Step 1: Set your team up in Indemni
 
 <AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
+  <Accordion icon="users" title="Invite your team">
+    During the onboarding process, you will have received a login for your admin account for the company. This admin account will be responsible for managing your users. To invite your team, please navigate to your [team setttings page](https://app.indemni.com/settings/organization).
   </Accordion>
 </AccordionGroup>
 
-### Step 2: Deploy your changes
+### Step 2: Add your first shipment data
 
 <AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
+  <Accordion icon="box" title="Adding a Cargo Owner">
+    A cargo owner is the customer or company that owns the goods you’re shipping. For example, if you are shipping for Acme Factory ABC, then any
+    shipments that you'd like to verify drivers or vet carriers for should be under the cargo owner Acme Factory ABC. To add a Cargo Owner, please 
+    navigate to the [Cargo Owner Page](https://app.indemni.com/cargo-owners)
+
+    What you need to fill out:
+    - Name (required): What they’re called (company or person).
+    - Email (optional): A contact email.
+    - Phone number (optional): A contact phone.
+    - Industry (optional): One or more industries they’re in.
+    - Active status (optional): Mark whether they’re currently active.
+
+    The Cargo Owner ID will be created automatically when you create each individual cargo owner.
+  </Accordion>
+  <Accordion icon="truck" title="Adding a Carrier">
+    A carrier is the Trucking Carrier that moves your freight. Add carriers to manage their contact details, credentials, capacity, and vetting status in one place. To add a carrier, please navigate to the [Carrier Page](https://app.indemni.com/carriers)
+
+    What you need to fill out:
+    - Name (required): The carrier’s legal or operating name.
+    - Address (required): Street address, city, state, postal code, and country.
+    - DOT number (required): The U.S. DOT number for the carrier.
+
+    Helpful optional details:
+    - MC number: Motor Carrier number if applicable.
+    - Phone number and Email: Primary contact details.
+    - Website: Company website.
+    - Tax ID: Tax identification number.
+    - SCAC: Standard Carrier Alpha Code, if available.
+    - Safety and insurance: Safety rating, insurance provider, and policy number.
+    - Size details: Number of trucks and number of drivers.
+    - Notes: Any extra context you want to keep.
+
+    Status fields you can control:
+    - Active status: Mark whether the carrier is currently active.
+    - Vetting status: Track where they are in your vetting process (e.g., not vetted, in review, approved).
+
+    What we handle for you:
+    - ID and timestamps: Generated and updated automatically when you create or edit a carrier.
+  </Accordion>
+  <Accordion icon="steering-wheel" title="Adding a Driver">
     Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
     
     Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
 </Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+  <Accordion icon="clipboard-list" title="Adding a Shipment">
+    A shipment is a load you plan to move from an origin to a destination. Add shipments to track status, timing, equipment, and who’s involved.
+    What you need to fill out:
+    - Load ID (required): A unique identifier for the shipment. If you do not fill this in, then we will fill this out for you with a 
+    system generated Load ID.
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    Helpful optional details:
+    - Status: Where the shipment is in the process (e.g., Scheduled, In Transit, Delivered).
+    - Cargo owner: Who owns the freight.
+    - Origin and Destination addresses.
+    - Driver and Carrier.
+    - Pickup, arrival, and departure times.
+    - Equipment and identifiers: container number, pallet number, truck number, trailer number, dock.
+    - Value and condition: cargo value, whether it’s damaged, and condition notes.
+    - Tags and notes for easy filtering and context.
+    Status and confirmations:
+    - Confirmation: Mark when a shipment is confirmed and track its confirmed state.
+    - Verification: Track when a shipment was verified.
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
+    What we handle for you:
+    - ID and timestamps: Generated and updated automatically when you create or edit a shipment.
+</Accordion>
 </AccordionGroup>
 
-### Step 3: Go live
+### Step 3: Create a Verification Flow
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
+<Accordion icon="diagram-project" title="Create a new flow">
+  A flow is how you turn your verification process into something repeatable. To do this, follow these steps:
+
+  - Start by opening [**Flows**](https://app.indemni.com/flows?page=1) in your dashboard and clicking [**New Flow**](https://app.indemni.com/flows/add-flow).  
+  - Drag one of the following steps in sequential order:
+    - ID Verification - this is how you ask the driver to complete verifications, and check for CDL compliance
+    - Photo Step - this is how you request different photos from the driver at point of Pickup
+    - Document Step - this is how you request a scan of the documents the driver has on hand during Pickup
+
+  Once published, your flow runs the same way every time — consistent, auditable, and fast.
 </Accordion>
 
-## Next steps
+### Step 4: Send a Verification Link
 
-Now that you have your docs running, explore these key features:
+<Accordion icon="paper-plane" title="Create a new flow">
+  Once you are ready to send a driver verification link, please navigate to [Vet Driver](https://app.indemni.com/vet-driver) in order 
+  to issue a verification. A couple of quick notes
 
-<CardGroup cols={2}>
+  - To issue a verification, you require a Driver, a Shipment and a Flow. If this is not created, each input has a button below for you to quick 
+  add one of these objects 
+  - We offer both single and team drivers 
+  - Once you have selected a driver, flow and shipment, you can click the Vet Driver button. This will send a text message immediately to the driver 
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+  To review the status and results of the verification, please visit the [Verifications Page](https://app.indemni.com/verifications)
+</Accordion>
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  **Need help?** Please reach out to our support team at support@indemni.com or contact your customer success manager for more information.
 </Note>

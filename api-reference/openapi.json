@@ -1,16 +1,22 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "OpenAPI Plant Store",
-    "description": "A sample API that uses a plant store as an example to demonstrate features in the OpenAPI specification",
+    "title": "Indemni Platform API",
+    "description": "APIs for managing carriers, drivers, shipments, and cargo owners within the Indemni risk management platform.",
+    "version": "0.1.0",
     "license": {
-      "name": "MIT"
+      "name": "Proprietary"
     },
-    "version": "1.0.0"
+    "contact": {
+      "name": "Indemni Platform Team",
+      "email": "support@indemni.app",
+      "url": "https://indemni.app"
+    }
   },
   "servers": [
     {
-      "url": "http://sandbox.mintlify.com"
+      "url": "https://api.indemni.app/v1",
+      "description": "Production"
     }
   ],
   "security": [
@@ -18,106 +24,111 @@
       "bearerAuth": []
     }
   ],
-  "paths": {
-    "/plants": {
-      "get": {
-        "description": "Returns all plants from the system that the user has access to",
-        "parameters": [
-          {
-            "name": "limit",
-            "in": "query",
-            "description": "The maximum number of results to return",
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Plant response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Plant"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Unexpected error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "description": "Creates a new plant in the store",
-        "requestBody": {
-          "description": "Plant to add to the store",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NewPlant"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "plant response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Plant"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "unexpected error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
+  "tags": [
+    {
+      "name": "Drivers",
+      "description": "Driver onboarding, verification, and lifecycle management."
     },
-    "/plants/{id}": {
-      "delete": {
-        "description": "Deletes a single plant based on the ID supplied",
+    {
+      "name": "Shipments",
+      "description": "Shipment planning, tracking, and verification workflows."
+    },
+    {
+      "name": "Cargo Owners",
+      "description": "Cargo owner accounts, preferences, and default flows."
+    },
+    {
+      "name": "Carriers",
+      "description": "Carrier records, risk scores, and vetting states."
+    }
+  ],
+  "paths": {
+    "/drivers": {
+      "get": {
+        "tags": [
+          "Drivers"
+        ],
+        "operationId": "listDrivers",
+        "summary": "List drivers",
+        "description": "Returns drivers for the authenticated company with optional filtering by carrier, employment status, and verification state.",
         "parameters": [
           {
-            "name": "id",
-            "in": "path",
-            "description": "ID of plant to delete",
-            "required": true,
+            "name": "company_id",
+            "in": "query",
+            "description": "Filter drivers by owning company identifier.",
             "schema": {
               "type": "integer",
               "format": "int64"
             }
+          },
+          {
+            "name": "carrier_id",
+            "in": "query",
+            "description": "Filter drivers assigned to a specific carrier.",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "employment_status",
+            "in": "query",
+            "description": "Filter by driver employment status.",
+            "schema": {
+              "$ref": "#/components/schemas/EmploymentStatus"
+            }
+          },
+          {
+            "name": "is_verified",
+            "in": "query",
+            "description": "Filter by verification status.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of drivers to return.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Cursor for pagination.",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
-          "204": {
-            "description": "Plant deleted",
-            "content": {}
+          "200": {
+            "description": "Driver collection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriversResponse"
+                }
+              }
+            }
           },
-          "400": {
-            "description": "unexpected error",
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Unexpected error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -126,27 +137,1260 @@
               }
             }
           }
-        }
-      }
-    }
-  },
-  "webhooks": {
-    "/plant/webhook": {
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
       "post": {
-        "description": "Information about a new plant added to the store",
+        "tags": [
+          "Drivers"
+        ],
+        "operationId": "createDriver",
+        "summary": "Create driver",
+        "description": "Creates a new driver record and links it to a carrier for onboarding workflows.",
         "requestBody": {
-          "description": "Plant added to the store",
+          "description": "Driver payload.",
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/NewPlant"
+                "$ref": "#/components/schemas/DriverCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Driver created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriverResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/drivers/{driverId}": {
+      "parameters": [
+        {
+          "name": "driverId",
+          "in": "path",
+          "required": true,
+          "description": "Numeric identifier of the driver.",
+          "schema": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Drivers"
+        ],
+        "operationId": "getDriver",
+        "summary": "Get driver",
+        "description": "Fetches a driver record including verification and safety metadata.",
+        "responses": {
+          "200": {
+            "description": "Driver retrieved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriverResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Driver not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Drivers"
+        ],
+        "operationId": "updateDriver",
+        "summary": "Update driver",
+        "description": "Updates mutable driver attributes such as employment status or contact information.",
+        "requestBody": {
+          "description": "Driver partial update payload.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DriverUpdate"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Return a 200 status to indicate that the data was received successfully"
+            "description": "Driver updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriverResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Driver not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Drivers"
+        ],
+        "operationId": "deleteDriver",
+        "summary": "Delete driver",
+        "description": "Deletes a driver and revokes pending verification runs when applicable.",
+        "responses": {
+          "204": {
+            "description": "Driver deleted."
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Driver not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/shipments": {
+      "get": {
+        "tags": [
+          "Shipments"
+        ],
+        "operationId": "listShipments",
+        "summary": "List shipments",
+        "description": "Returns shipments with filtering for direction, status, and linked entities.",
+        "parameters": [
+          {
+            "name": "company_id",
+            "in": "query",
+            "description": "Filter by company identifier.",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "carrier_id",
+            "in": "query",
+            "description": "Filter by carrier identifier.",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "cargo_owner_id",
+            "in": "query",
+            "description": "Filter by cargo owner identifier.",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "driver_id",
+            "in": "query",
+            "description": "Filter by assigned driver identifier.",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by shipment status.",
+            "schema": {
+              "$ref": "#/components/schemas/ShipmentStatus"
+            }
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "description": "Filter by shipment direction.",
+            "schema": {
+              "$ref": "#/components/schemas/ShipmentDirection"
+            }
+          },
+          {
+            "name": "confirmed",
+            "in": "query",
+            "description": "Filter by confirmation flag.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of shipments to return.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Cursor for pagination.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shipment collection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipmentsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Shipments"
+        ],
+        "operationId": "createShipment",
+        "summary": "Create shipment",
+        "description": "Creates a new shipment record to kick off verification and tracking workflows.",
+        "requestBody": {
+          "description": "Shipment payload.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShipmentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Shipment created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipmentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/shipments/{shipmentId}": {
+      "parameters": [
+        {
+          "name": "shipmentId",
+          "in": "path",
+          "required": true,
+          "description": "Numeric identifier of the shipment.",
+          "schema": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Shipments"
+        ],
+        "operationId": "getShipment",
+        "summary": "Get shipment",
+        "description": "Fetches a shipment including linked carrier, driver, and verification metadata.",
+        "responses": {
+          "200": {
+            "description": "Shipment retrieved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipmentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Shipment not found.",
+            "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  }
+                }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Shipments"
+        ],
+        "operationId": "updateShipment",
+        "summary": "Update shipment",
+        "description": "Updates shipment status, scheduling data, or linked entities.",
+        "requestBody": {
+          "description": "Shipment partial update payload.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShipmentUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Shipment updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipmentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Shipment not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Shipments"
+        ],
+        "operationId": "deleteShipment",
+        "summary": "Delete shipment",
+        "description": "Deletes a shipment record and revokes associated verification runs.",
+        "responses": {
+          "204": {
+            "description": "Shipment deleted."
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Shipment not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/cargo-owners": {
+      "get": {
+        "tags": [
+          "Cargo Owners"
+        ],
+        "operationId": "listCargoOwners",
+        "summary": "List cargo owners",
+        "description": "Returns cargo owners managed by the authenticated company with optional filters.",
+        "parameters": [
+          {
+            "name": "company_id",
+            "in": "query",
+            "description": "Filter by company identifier.",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "is_active",
+            "in": "query",
+            "description": "Filter by active flag.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search by name, email, or phone number.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of cargo owners to return.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Cursor for pagination.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cargo owner collection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CargoOwnersResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Cargo Owners"
+        ],
+        "operationId": "createCargoOwner",
+        "summary": "Create cargo owner",
+        "description": "Creates a new cargo owner account and optional default verification flow.",
+        "requestBody": {
+          "description": "Cargo owner payload.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CargoOwnerCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cargo owner created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CargoOwnerResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/cargo-owners/{cargoOwnerId}": {
+      "parameters": [
+        {
+          "name": "cargoOwnerId",
+          "in": "path",
+          "required": true,
+          "description": "Numeric identifier of the cargo owner.",
+          "schema": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Cargo Owners"
+        ],
+        "operationId": "getCargoOwner",
+        "summary": "Get cargo owner",
+        "description": "Fetches cargo owner details.",
+        "responses": {
+          "200": {
+            "description": "Cargo owner retrieved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CargoOwnerResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cargo owner not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Cargo Owners"
+        ],
+        "operationId": "updateCargoOwner",
+        "summary": "Update cargo owner",
+        "description": "Updates cargo owner contact details or activation status.",
+        "requestBody": {
+          "description": "Cargo owner partial update payload.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CargoOwnerUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cargo owner updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CargoOwnerResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cargo owner not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Cargo Owners"
+        ],
+        "operationId": "deleteCargoOwner",
+        "summary": "Delete cargo owner",
+        "description": "Deletes a cargo owner and removes their default flows.",
+        "responses": {
+          "204": {
+            "description": "Cargo owner deleted."
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cargo owner not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/carriers": {
+      "get": {
+        "tags": [
+          "Carriers"
+        ],
+        "operationId": "listCarriers",
+        "summary": "List carriers",
+        "description": "Returns carriers with risk and vetting context.",
+        "parameters": [
+          {
+            "name": "company_id",
+            "in": "query",
+            "description": "Filter by company identifier.",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "vetting_status",
+            "in": "query",
+            "description": "Filter by carrier vetting status.",
+            "schema": {
+              "$ref": "#/components/schemas/CarrierVettingStatus"
+            }
+          },
+          {
+            "name": "is_vetted",
+            "in": "query",
+            "description": "Filter by carriers that have completed vetting.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "is_active",
+            "in": "query",
+            "description": "Filter by active carriers.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search by legal name, DOT, or MC number.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of carriers to return.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Cursor for pagination.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Carrier collection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarriersResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Carriers"
+        ],
+        "operationId": "createCarrier",
+        "summary": "Create carrier",
+        "description": "Creates a new carrier record, initializing risk and compliance tracking.",
+        "requestBody": {
+          "description": "Carrier payload.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CarrierCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Carrier created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarrierResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/carriers/{carrierId}": {
+      "parameters": [
+        {
+          "name": "carrierId",
+          "in": "path",
+          "required": true,
+          "description": "Numeric identifier of the carrier.",
+          "schema": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Carriers"
+        ],
+        "operationId": "getCarrier",
+        "summary": "Get carrier",
+        "description": "Fetches a carrier record including risk profile metrics.",
+        "responses": {
+          "200": {
+            "description": "Carrier retrieved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarrierResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Carrier not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Carriers"
+        ],
+        "operationId": "updateCarrier",
+        "summary": "Update carrier",
+        "description": "Updates carrier contact details, notes, or vetting status.",
+        "requestBody": {
+          "description": "Carrier partial update payload.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CarrierUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Carrier updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarrierResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Carrier not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Carriers"
+        ],
+        "operationId": "deleteCarrier",
+        "summary": "Delete carrier",
+        "description": "Deletes a carrier and archives dependent driver records.",
+        "responses": {
+          "204": {
+            "description": "Carrier deleted."
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Carrier not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "webhooks": {
+    "/events/driver-verification": {
+      "post": {
+        "summary": "Driver verification status updated",
+        "description": "Triggered when a driver's verification run completes or fails.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DriverVerificationEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Return a 200 to acknowledge receipt."
+          }
+        }
+      }
+    },
+    "/events/shipment-status": {
+      "post": {
+        "summary": "Shipment status change",
+        "description": "Sent when a shipment status transitions between major milestones.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShipmentStatusEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Return a 200 to acknowledge receipt."
           }
         }
       }
@@ -154,63 +1398,1362 @@
   },
   "components": {
     "schemas": {
-      "Plant": {
-        "required": [
-          "name"
-        ],
+      "DriversResponse": {
         "type": "object",
         "properties": {
-          "name": {
-            "description": "The name of the plant",
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Driver"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "DriverResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Driver"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "Driver": {
+        "type": "object",
+        "description": "Driver record synced from the Indemni drivers table.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "company_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "carrier_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Auth user identifier linked to the driver."
+          },
+          "first_name": {
             "type": "string"
           },
-          "tag": {
-            "description": "Tag to specify the type",
+          "middle_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "last_name": {
             "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "nullable": true
+          },
+          "phone_number": {
+            "type": "string",
+            "nullable": true,
+            "description": "E.164 formatted phone number."
+          },
+          "employment_status": {
+            "$ref": "#/components/schemas/EmploymentStatus"
+          },
+          "employment_start_date": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "date_of_birth": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "driver_license_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "driver_license_state": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2,
+            "description": "Issuing state code."
+          },
+          "driver_license_class": {
+            "type": "string",
+            "nullable": true
+          },
+          "driver_license_expiration_date": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "is_verified": {
+            "type": "boolean"
+          },
+          "last_verified_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "rating": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 5
+          },
+          "safety_score": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100
+          },
+          "safety_violations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "company_id",
+          "carrier_id",
+          "user_id",
+          "first_name",
+          "last_name",
+          "employment_status",
+          "is_verified",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "DriverCreate": {
+        "type": "object",
+        "description": "Payload to create a driver.",
+        "properties": {
+          "company_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "carrier_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "middle_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "nullable": true
+          },
+          "phone_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "employment_status": {
+            "$ref": "#/components/schemas/EmploymentStatus",
+            "default": "active"
+          },
+          "employment_start_date": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "date_of_birth": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "driver_license_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "driver_license_state": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2
+          },
+          "driver_license_class": {
+            "type": "string",
+            "nullable": true
+          },
+          "driver_license_expiration_date": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          }
+        },
+        "required": [
+          "company_id",
+          "carrier_id",
+          "user_id",
+          "first_name",
+          "last_name"
+        ]
+      },
+      "DriverUpdate": {
+        "type": "object",
+        "description": "Payload to update a driver.",
+        "properties": {
+          "carrier_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "middle_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "nullable": true
+          },
+          "phone_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "employment_status": {
+            "$ref": "#/components/schemas/EmploymentStatus"
+          },
+          "employment_start_date": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "date_of_birth": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "driver_license_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "driver_license_state": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2
+          },
+          "driver_license_class": {
+            "type": "string",
+            "nullable": true
+          },
+          "driver_license_expiration_date": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "is_verified": {
+            "type": "boolean"
+          },
+          "last_verified_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "rating": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 5
+          },
+          "safety_score": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100
+          },
+          "safety_violations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
           }
         }
       },
-      "NewPlant": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/Plant"
-          },
-          {
-            "required": [
-              "id"
-            ],
-            "type": "object",
-            "properties": {
-              "id": {
-                "description": "Identification number of the plant",
-                "type": "integer",
-                "format": "int64"
-              }
+      "ShipmentsResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Shipment"
             }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
           }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ShipmentResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Shipment"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "Shipment": {
+        "type": "object",
+        "description": "Shipment record representing a monitored load.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "company_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "cargo_owner_id": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "carrier_id": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "driver_id": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "dock_id": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "load_id": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ShipmentStatus"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/ShipmentDirection",
+            "nullable": true
+          },
+          "origin_address": {
+            "type": "string",
+            "nullable": true
+          },
+          "destination_address": {
+            "type": "string",
+            "nullable": true
+          },
+          "pickup_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "departure_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "arrival_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "confirmed": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "confirmed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "condition": {
+            "type": "string",
+            "nullable": true
+          },
+          "is_damaged": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "cargo_value": {
+            "type": "number",
+            "format": "double",
+            "nullable": true,
+            "description": "Estimated cargo value in USD."
+          },
+          "container_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "trailer_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "truck_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "pallet_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "yard_comments": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "tags": {
+            "type": "string",
+            "nullable": true,
+            "description": "Comma-separated custom tags."
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "verified_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "company_id",
+          "load_id",
+          "status",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "ShipmentCreate": {
+        "type": "object",
+        "description": "Payload to create a shipment.",
+        "properties": {
+          "company_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "cargo_owner_id": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "carrier_id": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "driver_id": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "dock_id": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "load_id": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ShipmentStatus",
+            "default": "Scheduled"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/ShipmentDirection",
+            "nullable": true
+          },
+          "origin_address": {
+            "type": "string",
+            "nullable": true
+          },
+          "destination_address": {
+            "type": "string",
+            "nullable": true
+          },
+          "pickup_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "departure_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "arrival_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "confirmed": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "confirmed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "condition": {
+            "type": "string",
+            "nullable": true
+          },
+          "is_damaged": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "cargo_value": {
+            "type": "number",
+            "format": "double",
+            "nullable": true,
+            "description": "Estimated cargo value in USD."
+          },
+          "container_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "trailer_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "truck_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "pallet_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "yard_comments": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "tags": {
+            "type": "string",
+            "nullable": true,
+            "description": "Comma-separated custom tags."
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true,
+            "default": 0
+          },
+          "verified_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "company_id",
+          "load_id"
+        ]
+      },
+      "ShipmentUpdate": {
+        "type": "object",
+        "description": "Payload to update a shipment.",
+        "properties": {
+          "cargo_owner_id": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "carrier_id": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "driver_id": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "dock_id": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/ShipmentStatus"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/ShipmentDirection",
+            "nullable": true
+          },
+          "origin_address": {
+            "type": "string",
+            "nullable": true
+          },
+          "destination_address": {
+            "type": "string",
+            "nullable": true
+          },
+          "pickup_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "departure_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "arrival_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "confirmed": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "confirmed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "condition": {
+            "type": "string",
+            "nullable": true
+          },
+          "is_damaged": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "cargo_value": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "container_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "trailer_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "truck_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "pallet_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "yard_comments": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "tags": {
+            "type": "string",
+            "nullable": true
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "verified_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "CargoOwnersResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CargoOwner"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "CargoOwnerResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CargoOwner"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "CargoOwner": {
+        "type": "object",
+        "description": "Cargo owner customer record.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "company_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "nullable": true
+          },
+          "phone_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "industry": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "description": "NAICS-like descriptors."
+          },
+          "is_active": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "company_id",
+          "name",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "CargoOwnerCreate": {
+        "type": "object",
+        "description": "Payload to create a cargo owner.",
+        "properties": {
+          "company_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "nullable": true
+          },
+          "phone_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "industry": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+        "is_active": {
+          "type": "boolean",
+          "nullable": true
+        }
+      },
+        "required": [
+          "company_id",
+          "name"
+        ]
+      },
+      "CargoOwnerUpdate": {
+        "type": "object",
+        "description": "Payload to update a cargo owner.",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "nullable": true
+          },
+          "phone_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "industry": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "is_active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CarriersResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Carrier"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "CarrierResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Carrier"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "Carrier": {
+        "type": "object",
+        "description": "Carrier record with vetting and insurance metadata.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "company_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "dot_number": {
+            "type": "string",
+            "description": "USDOT identifier."
+          },
+          "mc_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "scac": {
+            "type": "string",
+            "nullable": true
+          },
+          "tax_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "address_line1": {
+            "type": "string"
+          },
+          "address_line2": {
+            "type": "string",
+            "nullable": true
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "postal_code": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "nullable": true
+          },
+          "phone_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "website": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "insurance_provider": {
+            "type": "string",
+            "nullable": true
+          },
+          "insurance_policy_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "safety_rating": {
+            "type": "string",
+            "nullable": true
+          },
+          "number_of_trucks": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "number_of_drivers": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "is_vetted": {
+            "type": "boolean"
+          },
+          "vetting_status": {
+            "$ref": "#/components/schemas/CarrierVettingStatus"
+          },
+          "vetted_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "company_id",
+          "name",
+          "dot_number",
+          "address_line1",
+          "city",
+          "state",
+          "postal_code",
+          "country",
+          "is_active",
+          "is_vetted",
+          "vetting_status",
+          "created_at"
+        ]
+      },
+      "CarrierCreate": {
+        "type": "object",
+        "description": "Payload to create a carrier.",
+        "properties": {
+          "company_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "dot_number": {
+            "type": "string"
+          },
+          "mc_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "scac": {
+            "type": "string",
+            "nullable": true
+          },
+          "tax_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "address_line1": {
+            "type": "string"
+          },
+          "address_line2": {
+            "type": "string",
+            "nullable": true
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "postal_code": {
+            "type": "string"
+          },
+        "country": {
+          "type": "string",
+          "default": "USA"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "nullable": true
+        },
+        "phone_number": {
+          "type": "string",
+          "nullable": true
+        },
+        "website": {
+          "type": "string",
+          "format": "uri",
+          "nullable": true
+        },
+        "safety_rating": {
+          "type": "string",
+          "nullable": true
+        },
+        "insurance_provider": {
+          "type": "string",
+          "nullable": true
+        },
+        "insurance_policy_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "number_of_trucks": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "number_of_drivers": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "company_id",
+          "name",
+          "dot_number",
+          "address_line1",
+          "city",
+          "state",
+          "postal_code"
+        ]
+      },
+      "CarrierUpdate": {
+        "type": "object",
+        "description": "Payload to update a carrier.",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "nullable": true
+          },
+          "phone_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "website": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "address_line1": {
+            "type": "string"
+          },
+          "address_line2": {
+            "type": "string",
+            "nullable": true
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "postal_code": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "insurance_provider": {
+            "type": "string",
+            "nullable": true
+          },
+          "insurance_policy_number": {
+            "type": "string",
+            "nullable": true
+          },
+          "safety_rating": {
+            "type": "string",
+            "nullable": true
+          },
+          "number_of_trucks": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "number_of_drivers": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "is_vetted": {
+            "type": "boolean"
+          },
+          "vetting_status": {
+            "$ref": "#/components/schemas/CarrierVettingStatus"
+          },
+          "vetted_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "DriverVerificationEvent": {
+        "type": "object",
+        "description": "Webhook payload describing a driver verification status change.",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "driver.verification.completed",
+              "driver.verification.failed"
+            ]
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "driver": {
+            "$ref": "#/components/schemas/Driver"
+          },
+          "verification_run_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Provider-specific verification metadata."
+          }
+        },
+        "required": [
+          "event_id",
+          "type",
+          "occurred_at",
+          "driver",
+          "verification_run_id"
+        ]
+      },
+      "ShipmentStatusEvent": {
+        "type": "object",
+        "description": "Webhook payload describing a shipment status transition.",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "shipment.status.updated"
+            ]
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "shipment": {
+            "$ref": "#/components/schemas/Shipment"
+          },
+          "previous_status": {
+            "$ref": "#/components/schemas/ShipmentStatus",
+            "nullable": true
+          },
+          "current_status": {
+            "$ref": "#/components/schemas/ShipmentStatus"
+          }
+        },
+        "required": [
+          "event_id",
+          "type",
+          "occurred_at",
+          "shipment",
+          "current_status"
+        ]
+      },
+      "EmploymentStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "inactive",
+          "suspended"
+        ]
+      },
+      "ShipmentDirection": {
+        "type": "string",
+        "enum": [
+          "Inbound",
+          "Outbound",
+          "Pickup",
+          "Delivery"
+        ]
+      },
+      "ShipmentStatus": {
+        "type": "string",
+        "enum": [
+          "Scheduled",
+          "In Transit",
+          "Delivered",
+          "Cancelled"
+        ]
+      },
+      "CarrierVettingStatus": {
+        "type": "string",
+        "enum": [
+          "not_vetted",
+          "awaiting_decision",
+          "approved",
+          "rejected"
         ]
       },
       "Error": {
-        "required": [
-          "error",
-          "message"
-        ],
         "type": "object",
         "properties": {
-          "error": {
-            "type": "integer",
-            "format": "int32"
+          "code": {
+            "type": "string",
+            "description": "Application-specific error code."
           },
           "message": {
             "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true
           }
-        }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
       }
     },
     "securitySchemes": {
       "bearerAuth": {
         "type": "http",
-        "scheme": "bearer"
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     }
   }
